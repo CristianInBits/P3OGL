@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29326.143
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "P3OGL", "P3OGL.vcxproj", "{70C0D183-E002-4AE2-828C-DB24BD68B5CC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x86 = Debug|x86
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{70C0D183-E002-4AE2-828C-DB24BD68B5CC}.Debug|x86.ActiveCfg = Debug|Win32
+		{70C0D183-E002-4AE2-828C-DB24BD68B5CC}.Debug|x86.Build.0 = Debug|Win32
+		{70C0D183-E002-4AE2-828C-DB24BD68B5CC}.Release|x86.ActiveCfg = Release|Win32
+		{70C0D183-E002-4AE2-828C-DB24BD68B5CC}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1EDDABC8-E900-4D9D-A526-879B62C9E6D1}
+	EndGlobalSection
+EndGlobal
