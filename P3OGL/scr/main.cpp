@@ -68,6 +68,8 @@ int main(int argc, char** argv)
 	initShader("../shaders_P3/shader.v0.vert", "../shaders_P3/shader.v0.frag");
 	initObj();
 
+	glutMainLoop();
+
 	destroy();
 
 	return 0;
@@ -75,7 +77,42 @@ int main(int argc, char** argv)
 	
 //////////////////////////////////////////
 // Funciones auxiliares 
-void initContext(int argc, char** argv){}
+void initContext(int argc, char** argv)
+{
+	// 1 -- Inicializar la librería
+	glutInit(&argc, argv);
+
+	// 2 -- Pedir versión y perfil
+	glutInitContextVersion(3, 3);
+	glutInitContextProfile(GLUT_CORE_PROFILE);
+
+	// 3 -- Configurar el framebuffer por defecto
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
+
+	// 4 -- Tamaño y posición de la ventana
+	glutInitWindowSize(500, 500);
+	glutInitWindowPosition(0, 0);
+
+	// 5 -- Crear la ventana (y el contexto)
+	glutCreateWindow("Práctica OGL");
+
+	// 6 -- Inicializar extensiones
+	GLenum err = glewInit();
+	if (GLEW_OK != err)
+	{
+		std::cout << "Error: " << glewGetErrorString(err) << std::endl;
+		exit(-1);
+	}
+	const GLubyte* oglVersion = glGetString(GL_VERSION);
+	std::cout << "This system supports OpenGL Version: " << oglVersion << std::endl;
+
+	// 7 -- Registrar callbacks
+	glutReshapeFunc(resizeFunc);
+	glutDisplayFunc(renderFunc);
+	glutIdleFunc(idleFunc);
+	glutKeyboardFunc(keyboardFunc);
+	glutMouseFunc(mouseFunc);
+}
 void initOGL(){}
 void destroy(){}
 void initShader(const char *vname, const char *fname){}
@@ -84,7 +121,11 @@ void initObj(){}
 GLuint loadShader(const char *fileName, GLenum type){ return 0; }
 unsigned int loadTex(const char *fileName){ return 0; }
 
-void renderFunc(){}
+void renderFunc()
+{
+	glutSwapBuffers();
+}
+
 void resizeFunc(int width, int height){}
 void idleFunc(){}
 void keyboardFunc(unsigned char key, int x, int y){}
