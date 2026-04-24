@@ -36,10 +36,14 @@ int uModelViewProjMat;
 int uNormalMat;
 
 // Atributos
-//int inPos;
-//int inColor;
-//int inNormal;
-//int inTexCoord;
+int inPos;
+int inColor;
+int inNormal;
+int inTexCoord;
+
+// Carga del modelo
+unsigned int vao;
+unsigned int buffs[5];
 
 //////////////////////////////////////////////////////////////
 // Funciones auxiliares
@@ -152,11 +156,16 @@ void initOGL()
 
 void destroy()
 {
+	// Shaders (Paso 3)
 	glDetachShader(program, vshader);
 	glDetachShader(program, fshader);
 	glDeleteShader(vshader);
 	glDeleteShader(fshader);
 	glDeleteProgram(program);
+
+	// Geometría (Paso 4)
+	glDeleteBuffers(5, buffs);
+	glDeleteVertexArrays(1, &vao);
 }
 
 void initShader(const char* vname, const char* fname)
@@ -200,13 +209,71 @@ void initShader(const char* vname, const char* fname)
 	// Ya NO necesitamos glGetAttribLocation:
 	// sabemos que inPos=0, inColor=1, inNormal=2, inTexCoord=3
 	// porque los declaramos nosotros en el shader.
-	//inPos = 0;
-	//inColor = 1;
-	//inNormal = 2;
-	//inTexCoord = 3;
+	inPos = 0;
+	inColor = 1;
+	inNormal = 2;
+	inTexCoord = 3;
 }
 
-void initObj(){}
+void initObj()
+{
+	// Crear y activar VAO
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
+
+	glGenBuffers(5, buffs);
+
+	// buffs[0] -> posiciones -> atributo inPos (location 0)
+	glBindBuffer(GL_ARRAY_BUFFER, buffs[0]);
+	glBufferData(GL_ARRAY_BUFFER,
+		cubeNVertex * sizeof(float) * 3,
+		cubeVertexPos,
+		GL_STATIC_DRAW
+	);
+	glVertexAttribPointer(inPos, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(inPos);
+
+	// buffs[1] -> colores -> atributo inColor (location 1)
+	glBindBuffer(GL_ARRAY_BUFFER, buffs[1]);
+	glBufferData(GL_ARRAY_BUFFER,
+		cubeNVertex * sizeof(float) * 3,
+		cubeVertexColor,
+		GL_STATIC_DRAW
+	);
+	glVertexAttribPointer(inColor, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(inColor);
+
+	// buffs[2] -> normales -> atributo inNormal (location 2)
+	glBindBuffer(GL_ARRAY_BUFFER, buffs[2]);
+	glBufferData(GL_ARRAY_BUFFER,
+		cubeNVertex * sizeof(float) * 3,
+		cubeVertexNormal,
+		GL_STATIC_DRAW
+		);
+	glVertexAttribPointer(inNormal, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(inNormal);
+
+	// buffs[3] -> coord. textura -> atribut
+	glBindBuffer(GL_ARRAY_BUFFER, buffs[3]);
+	glBufferData(GL_ARRAY_BUFFER,
+		cubeNVertex * sizeof(float) * 2,
+		cubeVertexTexCoord,
+		GL_STATIC_DRAW
+	);
+	glVertexAttribPointer(inTexCoord, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(inTexCoord);
+
+	// buffs[4] -> índices de triángulos
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffs[4]);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER,
+		cubeNTriangleIndex * sizeof(unsigned int) * 3,
+		cubeTriangleIndex,
+		GL_STATIC_DRAW
+	);
+
+	// Inicializar la matriz model
+	model = glm::mat4(1.0f);
+}
 
 GLuint loadShader(const char* fileName, GLenum type)
 {
