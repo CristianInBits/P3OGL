@@ -1,3 +1,4 @@
 ﻿cl : línea de comandos warning D9035: La opción 'Gm' está desusada y se quitará en próximas versiones
   main.cpp
+auxiliar.obj : warning LNK4075: se omite '/EDITANDCONTINUE' debido a la especificación '/SAFESEH'
   P3OGL.vcxproj -> C:\Users\crist\Repositorios\P3OGL\P3OGL\Debug\P3OGL.exe

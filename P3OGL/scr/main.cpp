@@ -113,7 +113,30 @@ void initContext(int argc, char** argv)
 	glutKeyboardFunc(keyboardFunc);
 	glutMouseFunc(mouseFunc);
 }
-void initOGL(){}
+void initOGL()
+{
+	// 1 -- Activar el test de profundidad
+	glEnable(GL_DEPTH_TEST);
+
+	// 2 -- Establecer el color de fondo
+	glClearColor(0.2f, 0.2f, 0.2f, 0.0f);
+
+	// 3 -- Cara frontal: vértices en orden antihorario
+	glFrontFace(GL_CCW);
+
+	// 4 -- Modo de relleo: sólido
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+	// 5 -- Activar el backface culling
+	glEnable(GL_CULL_FACE);
+
+	// 6 -- Matriz de proyección en perspectiva
+	proj = glm::perspective(glm::radians(60.0f), 1.0f, 0.1f, 50.0f);
+
+	// 7 -- Matriz de vista (cámara)
+	view = glm::mat4(1.0f);
+	view[3].z = -6;
+}
 void destroy(){}
 void initShader(const char *vname, const char *fname){}
 void initObj(){}
@@ -123,6 +146,9 @@ unsigned int loadTex(const char *fileName){ return 0; }
 
 void renderFunc()
 {
+	// Limpiar los buffers antes de cada frame
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 	glutSwapBuffers();
 }
 
