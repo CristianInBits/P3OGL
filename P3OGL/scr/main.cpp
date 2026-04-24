@@ -313,11 +313,37 @@ unsigned int loadTex(const char *fileName){ return 0; }
 
 void renderFunc()
 {
-	// Limpiar los buffers antes de cada frame
+	// 1. Limpiar buffers
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	// 2. Activar programa
 	glUseProgram(program);
 
+	// 3. Calcular matrices
+	glm::mat4 modelView = view * model;
+	glm::mat4 modelViewProj = proj * view * model;
+	glm::mat4 normal = glm::transpose(glm::inverse(modelView));
+
+	// 4. Subir matrices como uniforms
+	if (uModelViewMat != -1) {
+		glUniformMatrix4fv(uModelViewMat, 1, GL_FALSE,
+			&(modelView[0][0]));
+	}
+	if (uModelViewProjMat != -1) {
+		glUniformMatrix4fv(uModelViewProjMat, 1, GL_FALSE,
+			&(modelViewProj[0][0]));
+	}
+	if (uNormalMat != -1) {
+		glUniformMatrix4fv(uNormalMat, 1, GL_FALSE,
+			&(normal[0][0]));
+	}
+
+	// 5. Activar VAO y dibujar
+	glBindVertexArray(vao);
+	glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3,
+		GL_UNSIGNED_INT, (void*)0);
+
+	// 6. Presentar frame
 	glutSwapBuffers();
 }
 
