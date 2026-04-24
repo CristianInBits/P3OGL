@@ -1,9 +1,9 @@
 #version 330 core
 
-in vec3 inPos;	
-in vec3 inColor;
-in vec3 inNormal;
-in vec2 inTexCoord;
+layout(location = 0) in vec3 inPos;
+layout(location = 1) in vec3 inColor;
+layout(location = 2) in vec3 inNormal;
+layout(location = 3) in vec2 inTexCoord;
 
 uniform mat4 modelViewProj;
 uniform mat4 modelView;
@@ -16,10 +16,10 @@ out vec2 texCoord;
 
 void main()
 {
-	color = inColor;
-	texCoord = inTexCoord;
-	norm = (normal * vec4(inNormal, 0.0)).xyz;
-	pos = (modelView * vec4(inPos, 1.0)).xyz;
-	
-	gl_Position =  modelViewProj * vec4 (inPos,1.0);
+    color = inColor;
+    texCoord = inTexCoord;
+    norm = (normal * vec4(inNormal, 0.0)).xyz;
+    pos = (modelView * vec4(inPos, 1.0)).xyz;
+
+    gl_Position = modelViewProj * vec4(inPos, 1.0);
 }

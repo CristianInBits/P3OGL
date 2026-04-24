@@ -10,7 +10,7 @@ in vec2 texCoord;
 uniform sampler2D colorTex;
 uniform sampler2D emiTex;
 
-//Propiedades del objeto
+// Propiedades del objeto
 vec3 Ka;
 vec3 Kd;
 vec3 Ks;
@@ -18,12 +18,11 @@ vec3 N;
 float alpha = 1700.0;
 vec3 Ke;
 
-//Propiedades de la luz
+// Propiedades de la luz
 vec3 Ia = vec3 (0.3);
 vec3 Id = vec3 (1.0);
 vec3 Is = vec3 (1.0);
 vec3 lpos = vec3 (0.0); 
-
 
 vec3 shade();
 

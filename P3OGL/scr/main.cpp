@@ -1,7 +1,6 @@
 #include "BOX.h"
 #include "auxiliar.h"
 
-
 #include <gl/glew.h>
 #define SOLVE_FGLUT_WARNING
 #include <gl/freeglut.h> 
@@ -26,8 +25,21 @@ glm::mat4	model = glm::mat4(1.0f);
 //////////////////////////////////////////////////////////////
 // Variables que nos dan acceso a Objetos OpenGL
 //////////////////////////////////////////////////////////////
-//Por definir
+// Handles del shader y programa
+unsigned int vshader;
+unsigned int fshader;
+unsigned int program;
 
+// Variables Uniform
+int uModelViewMat;
+int uModelViewProjMat;
+int uNormalMat;
+
+// Atributos
+//int inPos;
+//int inColor;
+//int inNormal;
+//int inTexCoord;
 
 //////////////////////////////////////////////////////////////
 // Funciones auxiliares
@@ -137,17 +149,107 @@ void initOGL()
 	view = glm::mat4(1.0f);
 	view[3].z = -6;
 }
-void destroy(){}
-void initShader(const char *vname, const char *fname){}
+
+void destroy()
+{
+	glDetachShader(program, vshader);
+	glDetachShader(program, fshader);
+	glDeleteShader(vshader);
+	glDeleteShader(fshader);
+	glDeleteProgram(program);
+}
+
+void initShader(const char* vname, const char* fname)
+{
+	// Compilar
+	vshader = loadShader(vname, GL_VERTEX_SHADER);
+	fshader = loadShader(fname, GL_FRAGMENT_SHADER);
+
+	// Crear programa y adjuntar shaders
+	program = glCreateProgram();
+	glAttachShader(program, vshader);
+	glAttachShader(program, fshader);
+
+	// Ya NO necesitamos glBindAttribLocation:
+	// los layouts en el shader hacen ese trabajo.
+
+	// Enlazar
+	glLinkProgram(program);
+
+	// Comprobar errores de enlazado
+	int linked;
+	glGetProgramiv(program, GL_LINK_STATUS, &linked);
+	if (!linked)
+	{
+		GLint logLen;
+		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &logLen);
+		char* logString = new char[logLen];
+		glGetProgramInfoLog(program, logLen, NULL, logString);
+		std::cout << "Error: " << logString << std::endl;
+		delete[] logString;
+		glDeleteProgram(program);
+		program = 0;
+		exit(-1);
+	}
+
+	// Obtener locations de uniforms (sigue siendo necesario)
+	uNormalMat = glGetUniformLocation(program, "normal");
+	uModelViewMat = glGetUniformLocation(program, "modelView");
+	uModelViewProjMat = glGetUniformLocation(program, "modelViewProj");
+
+	// Ya NO necesitamos glGetAttribLocation:
+	// sabemos que inPos=0, inColor=1, inNormal=2, inTexCoord=3
+	// porque los declaramos nosotros en el shader.
+	//inPos = 0;
+	//inColor = 1;
+	//inNormal = 2;
+	//inTexCoord = 3;
+}
+
 void initObj(){}
 
-GLuint loadShader(const char *fileName, GLenum type){ return 0; }
+GLuint loadShader(const char* fileName, GLenum type)
+{
+	// 1. Leer el fichero GLSL a memoria
+	unsigned int fileLen;
+	char* source = loadStringFromFile(fileName, fileLen);
+
+	// 2. Crear el shader object y compilar
+	GLuint shader;
+	shader = glCreateShader(type);
+	glShaderSource(shader, 1,
+		(const GLchar**)&source,
+		(const GLint*)&fileLen);
+	glCompileShader(shader);
+	delete[] source;
+
+	// 3. Comprobar errores de compilación
+	GLint compiled;
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
+	if (!compiled)
+	{
+		GLint logLen;
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLen);
+		char* logString = new char[logLen];
+		glGetShaderInfoLog(shader, logLen, NULL, logString);
+		std::cout << "Error: " << logString << std::endl;
+		delete[] logString;
+		glDeleteShader(shader);
+		exit(-1);
+	}
+
+	// 4. Devolver el handle del shader compilado
+	return shader;
+}
+
 unsigned int loadTex(const char *fileName){ return 0; }
 
 void renderFunc()
 {
 	// Limpiar los buffers antes de cada frame
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	glUseProgram(program);
 
 	glutSwapBuffers();
 }
