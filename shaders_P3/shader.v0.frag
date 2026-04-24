@@ -15,7 +15,7 @@ vec3 Ka;
 vec3 Kd;
 vec3 Ks;
 vec3 N;
-float alpha = 1700.0;
+float alpha = 32.0;
 vec3 Ke;
 
 // Propiedades de la luz

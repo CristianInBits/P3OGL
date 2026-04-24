@@ -347,7 +347,30 @@ void renderFunc()
 	glutSwapBuffers();
 }
 
-void resizeFunc(int width, int height){}
-void idleFunc(){}
+void resizeFunc(int width, int height)
+{
+	if (height == 0)
+	{
+		height = 1;
+	}
+
+	glViewport(0, 0, width, height);
+
+	float aspectRatio = (float)width / (float)height;
+	proj = glm::perspective(glm::radians(60.0f), aspectRatio, 0.1f, 50.0f);
+
+	glutPostRedisplay();
+}
+
+void idleFunc()
+{
+	model = glm::mat4(1.0f);
+	static float angle = 0.0f;
+	angle = (angle > 3.141592f * 2.0f) ? 0 : angle + 0.01f;
+	model = glm::rotate(model, angle, glm::vec3(1.0f, 1.0f, 0.0f));
+
+	glutPostRedisplay();
+}
+
 void keyboardFunc(unsigned char key, int x, int y){}
 void mouseFunc(int button, int state, int x, int y){}
