@@ -15,7 +15,7 @@ vec3 Ka;
 vec3 Kd;
 vec3 Ks;
 vec3 N;
-float alpha = 5000.0;
+float alpha = 50.0;
 vec3 Ke;
 
 //Propiedades de la luz
@@ -31,7 +31,8 @@ void main()
 	Ka = texture(colorTex, texCoord).rgb;
 	Kd = texture(colorTex, texCoord).rgb;
 	Ke = texture(emiTex, texCoord).rgb;
-	Ks = vec3 (1.0);
+	// Ks = vec3 (1.0);
+	Ks = vec3 (0.5);
 
 	N = normalize (norm);
 	

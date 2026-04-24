@@ -45,6 +45,14 @@ int inTexCoord;
 unsigned int vao;
 unsigned int buffs[5];
 
+// Texturas
+unsigned int colorTexId;
+unsigned int emiTexId;
+
+// Uniforms de texturas
+int uColorTex;
+int uEmiTex;
+
 //////////////////////////////////////////////////////////////
 // Funciones auxiliares
 //////////////////////////////////////////////////////////////
@@ -81,7 +89,7 @@ int main(int argc, char** argv)
 
 	initContext(argc, argv);
 	initOGL();
-	initShader("../shaders_P3/shader.v0.vert", "../shaders_P3/shader.v0.frag");
+	initShader("../shaders_P3/shader.v1.vert", "../shaders_P3/shader.v1.frag");
 	initObj();
 
 	glutMainLoop();
@@ -166,6 +174,10 @@ void destroy()
 	// Geometría (Paso 4)
 	glDeleteBuffers(5, buffs);
 	glDeleteVertexArrays(1, &vao);
+
+	// Liberar texturas
+	glDeleteTextures(1, &colorTexId);
+	glDeleteTextures(1, &emiTexId);
 }
 
 void initShader(const char* vname, const char* fname)
@@ -205,6 +217,9 @@ void initShader(const char* vname, const char* fname)
 	uNormalMat = glGetUniformLocation(program, "normal");
 	uModelViewMat = glGetUniformLocation(program, "modelView");
 	uModelViewProjMat = glGetUniformLocation(program, "modelViewProj");
+
+	uColorTex = glGetUniformLocation(program, "colorTex");
+	uEmiTex = glGetUniformLocation(program, "emiTex");
 
 	// Ya NO necesitamos glGetAttribLocation:
 	// sabemos que inPos=0, inColor=1, inNormal=2, inTexCoord=3
@@ -273,6 +288,10 @@ void initObj()
 
 	// Inicializar la matriz model
 	model = glm::mat4(1.0f);
+
+	// Cargar las texturas
+	colorTexId = loadTex("../img/color2.png");
+	emiTexId = loadTex("../img/emissive.png");
 }
 
 GLuint loadShader(const char* fileName, GLenum type)
@@ -309,7 +328,44 @@ GLuint loadShader(const char* fileName, GLenum type)
 	return shader;
 }
 
-unsigned int loadTex(const char *fileName){ return 0; }
+unsigned int loadTex(const char* fileName)
+{
+	// Cargar imagen a CPU
+	unsigned char* map;
+	unsigned int w, h;
+	map = loadTexture(fileName, w, h);
+	if (!map)
+	{
+		std::cout << "Error cargando el fichero: "
+			<< fileName << std::endl;
+		exit(-1);
+	}
+
+	// Crear textura en GPU y subir datos
+	unsigned int texId;
+	glGenTextures(1, &texId);
+	glBindTexture(GL_TEXTURE_2D, texId);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0,
+		GL_RGBA, GL_UNSIGNED_BYTE, (GLvoid*)map);
+
+	// Liberar memoria CPU
+	delete[] map;
+
+	// Generar mipmaps
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+	// Configurar filtrado y wrapping
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+		GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+		GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,
+		GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,
+		GL_CLAMP);
+
+	return texId;
+}
 
 void renderFunc()
 {
@@ -336,6 +392,21 @@ void renderFunc()
 	if (uNormalMat != -1) {
 		glUniformMatrix4fv(uNormalMat, 1, GL_FALSE,
 			&(normal[0][0]));
+	}
+
+	// Activar y bindear texturas
+	if (uColorTex != -1)
+	{
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, colorTexId);
+		glUniform1i(uColorTex, 0);
+	}
+
+	if (uEmiTex != -1)
+	{
+		glActiveTexture(GL_TEXTURE0 + 1);
+		glBindTexture(GL_TEXTURE_2D, emiTexId);
+		glUniform1i(uEmiTex, 1);
 	}
 
 	// 5. Activar VAO y dibujar
