@@ -10,7 +10,9 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <iostream>
+#include <chrono>
 
+#define USE_DELTA_TIME
 
 //////////////////////////////////////////////////////////////
 // Datos que se almacenan en la memoria de la CPU
@@ -437,8 +439,24 @@ void idleFunc()
 {
 	model = glm::mat4(1.0f);
 	static float angle = 0.0f;
-	angle = (angle > 3.141592f * 2.0f) ? 0 : angle + 0.01f;
-	model = glm::rotate(model, angle, glm::vec3(1.0f, 1.0f, 0.0f));
+
+#ifdef USE_DELTA_TIME
+	static auto lastTime = std::chrono::high_resolution_clock::now();
+	auto currentTime = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<float> deltaTime = currentTime - lastTime;
+	lastTime = currentTime;
+
+	const float speed = 1.0f;
+	angle += speed * deltaTime.count();
+
+	if (angle > 2.0f * 3.141592f)
+		angle -= 2.0f * 3.141592f;
+
+#else
+	angle = (angle > 3.141592f * 2.0f) ? 0.0f : angle + 0.01f;
+#endif
+
+	model = glm::rotate(model, angle, glm::normalize(glm::vec3(0.0f, 1.0f, 0.0f)));
 
 	glutPostRedisplay();
 }
