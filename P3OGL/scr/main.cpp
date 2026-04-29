@@ -34,6 +34,10 @@ glm::mat4	proj = glm::mat4(1.0f);
 glm::mat4	view = glm::mat4(1.0f);
 glm::mat4	model = glm::mat4(1.0f);
 
+// ===== TAREA 4: Segundo objeto =====
+glm::mat4	model2 = glm::mat4(1.0f);
+float orbitAngle = 0.0f;
+
 // ===== TAREA 1: Cámara FPS =====
 glm::vec3 CoP = glm::vec3(0.0f, 0.0f, 6.0f);
 glm::vec3 lookAt = glm::vec3(0.0f, 0.0f, -1.0f);
@@ -102,6 +106,7 @@ unsigned int loadTex(const char* fileName);
 
 glm::vec3 rotateY(glm::vec3 v, float angle);
 void updateView();
+void drawObject(const glm::mat4& objModel);
 
 // ============================================================================
 // FUNCIONES AUXILIARES
@@ -182,6 +187,27 @@ void updateView()
 	M[3] = glm::vec4(CoP, 1.0f);
 
 	view = glm::inverse(M);
+}
+
+//////////////////////////////////////////
+// TAREA 4: Dibujar un objeto con su model
+//////////////////////////////////////////
+
+void drawObject(const glm::mat4& objModel)
+{
+	glm::mat4 modelView = view * objModel;
+	glm::mat4 modelViewProj = proj * modelView;
+	glm::mat4 normal = glm::transpose(glm::inverse(modelView));
+
+	if (uModelViewMat != -1)
+		glUniformMatrix4fv(uModelViewMat, 1, GL_FALSE, &(modelView[0][0]));
+	if (uModelViewProjMat != -1)
+		glUniformMatrix4fv(uModelViewProjMat, 1, GL_FALSE, &(modelViewProj[0][0]));
+	if (uNormalMat != -1)
+		glUniformMatrix4fv(uNormalMat, 1, GL_FALSE, &(normal[0][0]));
+
+	glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3,
+		GL_UNSIGNED_INT, (void*)0);
 }
 
 //////////////////////////////////////////
@@ -282,7 +308,6 @@ void initShader(const char* vname, const char* fname)
 	uColorTex = glGetUniformLocation(program, "colorTex");
 	uEmiTex = glGetUniformLocation(program, "emiTex");
 
-	// Tarea 3: devuelven -1 en v0/v1 (luz hardcodeada)
 	uLightPos = glGetUniformLocation(program, "lpos");
 	uIa = glGetUniformLocation(program, "Ia");
 	uId = glGetUniformLocation(program, "Id");
@@ -372,8 +397,8 @@ unsigned int loadTex(const char* fileName)
 	glGenerateMipmap(GL_TEXTURE_2D);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 
 	return texId;
 }
@@ -388,25 +413,14 @@ void renderFunc()
 
 	glUseProgram(program);
 
-	glm::mat4 modelView = view * model;
-	glm::mat4 modelViewProj = proj * modelView;
-	glm::mat4 normal = glm::transpose(glm::inverse(modelView));
-
-	if (uModelViewMat != -1)
-		glUniformMatrix4fv(uModelViewMat, 1, GL_FALSE, &(modelView[0][0]));
-	if (uModelViewProjMat != -1)
-		glUniformMatrix4fv(uModelViewProjMat, 1, GL_FALSE, &(modelViewProj[0][0]));
-	if (uNormalMat != -1)
-		glUniformMatrix4fv(uNormalMat, 1, GL_FALSE, &(normal[0][0]));
-
-	// Tarea 3: luz (guards protegen v0/v1 donde locations = -1)
+	// Tarea 3: Luz (una sola vez, común a ambos objetos)
 	glm::vec3 lightPosEye = glm::vec3(view * glm::vec4(lightPosWorld, 1.0f));
 	if (uLightPos != -1) glUniform3fv(uLightPos, 1, &lightPosEye[0]);
 	if (uIa != -1) glUniform3f(uIa, 0.3f, 0.3f, 0.3f);
 	if (uId != -1) glUniform3f(uId, lightIntensity, lightIntensity, lightIntensity);
 	if (uIs != -1) glUniform3f(uIs, lightIntensity, lightIntensity, lightIntensity);
 
-	// Texturas
+	// Texturas (una sola vez, comunes a ambos objetos)
 	if (uColorTex != -1)
 	{
 		glActiveTexture(GL_TEXTURE0);
@@ -420,8 +434,14 @@ void renderFunc()
 		glUniform1i(uEmiTex, 1);
 	}
 
+	// VAO (una sola vez, compartido)
 	glBindVertexArray(vao);
-	glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3, GL_UNSIGNED_INT, (void*)0);
+
+	// ===== Cubo 1: rotación sobre sí mismo =====
+	drawObject(model);
+
+	// ===== TAREA 4: Cubo 2: órbita alrededor del primero =====
+	drawObject(model2);
 
 	glutSwapBuffers();
 }
@@ -445,7 +465,6 @@ void resizeFunc(int width, int height)
 
 void idleFunc()
 {
-	model = glm::mat4(1.0f);
 	static float angle = 0.0f;
 
 #ifdef USE_DELTA_TIME
@@ -453,16 +472,35 @@ void idleFunc()
 	auto currentTime = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<float> deltaTime = currentTime - lastTime;
 	lastTime = currentTime;
+	float dt = deltaTime.count();
 
 	const float speed = 1.0f;
-	angle += speed * deltaTime.count();
+	angle += speed * dt;
 	if (angle > 2.0f * 3.141592f) angle -= 2.0f * 3.141592f;
+
+	orbitAngle += 1.5f * dt;
+	if (orbitAngle > 2.0f * 3.141592f) orbitAngle -= 2.0f * 3.141592f;
 #else
 	angle = (angle > 3.141592f * 2.0f) ? 0.0f : angle + 0.01f;
+	orbitAngle = (orbitAngle > 3.141592f * 2.0f) ? 0.0f : orbitAngle + 0.005f;
 #endif
 
-	model = glm::rotate(model, angle, 
-		glm::normalize(glm::vec3(1.0f, 1.0f, 0.0f)));
+	// Cubo 1: rotación sobre eje diagonal
+	model = glm::mat4(1.0f);
+	model = glm::rotate(model, angle, glm::vec3(1.0f, 1.0f, 0.0f));
+
+	// Tarea 4: Cubo 2 — órbita + escala + spin
+	// Leído de abajo a arriba:
+	// 1. Rota sobre sí mismo (spin rápido)
+	// 2. Se escala a la mitad
+	// 3. Se aleja 3 unidades en X
+	// 4. Orbita alrededor del origen (eje Y)
+	model2 = glm::mat4(1.0f);
+	model2 = glm::rotate(model2, orbitAngle, glm::vec3(0.0f, 1.0f, 0.0f));
+	model2 = glm::translate(model2, glm::vec3(3.0f, 0.0f, 0.0f));
+	model2 = glm::scale(model2, glm::vec3(0.5f));
+	model2 = glm::rotate(model2, orbitAngle * 3.0f, glm::vec3(1.0f, 1.0f, 0.0f));
+
 	glutPostRedisplay();
 }
 
