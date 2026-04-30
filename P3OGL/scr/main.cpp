@@ -15,8 +15,33 @@
 
 #define USE_DELTA_TIME
 
+// ============================================================================
+// SELECCIÓN DE TAREAS
+// ============================================================================
+// Tareas 1 y 2 (cámara FPS + proyección manual) siempre activas.
+// Comenta/descomenta las siguientes para activar/desactivar tareas:
+//
+// ENABLE_TAREA3 : luz como uniform (shaders v2/v3 en vez de v0/v1)
+// ENABLE_TAREA4 : segundo cubo orbitante (requiere ENABLE_TAREA3)
+// ENABLE_TAREA5 : dos programas shader (requiere ENABLE_TAREA3 y ENABLE_TAREA4)
+// ============================================================================
+#define ENABLE_TAREA3
+#define ENABLE_TAREA4
+#define ENABLE_TAREA5
+
+// Validación
+#if defined(ENABLE_TAREA5) && !defined(ENABLE_TAREA4)
+#error "ENABLE_TAREA5 requiere ENABLE_TAREA4"
+#endif
+#if defined(ENABLE_TAREA5) && !defined(ENABLE_TAREA3)
+#error "ENABLE_TAREA5 requiere ENABLE_TAREA3"
+#endif
+#if defined(ENABLE_TAREA4) && !defined(ENABLE_TAREA3)
+#error "ENABLE_TAREA4 requiere ENABLE_TAREA3"
+#endif
+
 //////////////////////////////////////////////////////////////
-// TAREA 5: Struct para encapsular un programa shader
+// Struct para encapsular un programa shader
 //////////////////////////////////////////////////////////////
 struct ShaderProgram
 {
@@ -24,16 +49,13 @@ struct ShaderProgram
 	unsigned int fshader = 0;
 	unsigned int program = 0;
 
-	// Uniforms de matrices
 	int uModelViewMat = -1;
 	int uModelViewProjMat = -1;
 	int uNormalMat = -1;
 
-	// Uniforms de texturas
 	int uColorTex = -1;
 	int uEmiTex = -1;
 
-	// Uniforms de luz
 	int uLightPos = -1;
 	int uIa = -1;
 	int uId = -1;
@@ -49,9 +71,10 @@ glm::mat4	proj = glm::mat4(1.0f);
 glm::mat4	view = glm::mat4(1.0f);
 glm::mat4	model = glm::mat4(1.0f);
 
-// Tarea 4: Segundo objeto
+#ifdef ENABLE_TAREA4
 glm::mat4	model2 = glm::mat4(1.0f);
 float orbitAngle = 0.0f;
+#endif
 
 // Tarea 1: Cámara FPS
 glm::vec3 CoP = glm::vec3(0.0f, 0.0f, 6.0f);
@@ -67,27 +90,29 @@ const float farPlane = 50.0f;
 const float fovY = 60.0f;
 const float inv_t30 = 1.0f / tan(glm::radians(fovY / 2.0f));
 
+#ifdef ENABLE_TAREA3
 // Tarea 3: Luz como uniform
 glm::vec3 lightPosWorld = glm::vec3(0.0f, 3.0f, 3.0f);
 float lightIntensity = 1.0f;
+#endif
 
 //////////////////////////////////////////////////////////////
 // Variables que nos dan acceso a Objetos OpenGL
 //////////////////////////////////////////////////////////////
 
-// Tarea 5: Dos programas shader
-// sp0 = v2 (color por vértice, luz uniform) -> cubo orbital
-// sp1 = v3 (texturas, luz uniform)          -> cubo principal
-ShaderProgram sp0;
-ShaderProgram sp1;
+// Programa(s) shader
+ShaderProgram sp1;  // Programa principal (siempre existe)
+#ifdef ENABLE_TAREA5
+ShaderProgram sp0;  // Segundo programa (solo Tarea 5)
+#endif
 
-// Atributos (fijados por layout, compartidos por todos los shaders)
+// Atributos (fijados por layout, compartidos)
 int inPos = 0;
 int inColor = 1;
 int inNormal = 2;
 int inTexCoord = 3;
 
-// VAO y VBOs (compartidos)
+// VAO y VBOs
 unsigned int vao;
 unsigned int buffs[5];
 
@@ -107,6 +132,7 @@ void mouseFunc(int button, int state, int x, int y);
 void initContext(int argc, char** argv);
 void initOGL();
 void initShaderProgram(ShaderProgram& sp, const char* vname, const char* fname);
+void destroyShaderProgram(ShaderProgram& sp);
 void initObj();
 void destroy();
 
@@ -115,31 +141,61 @@ unsigned int loadTex(const char* fileName);
 
 glm::vec3 rotateY(glm::vec3 v, float angle);
 void updateView();
-void uploadLight(const ShaderProgram& sp);
 void drawObject(const ShaderProgram& sp, const glm::mat4& objModel);
+
+#ifdef ENABLE_TAREA3
+void uploadLight(const ShaderProgram& sp);
+#endif
+
+// ============================================================================
+// FUNCIONES AUXILIARES
+// ============================================================================
+void printConfig()
+{
+	std::cout << "========================================" << std::endl;
+	std::cout << "  Practica 3 - Programacion en OpenGL" << std::endl;
+	std::cout << "========================================" << std::endl;
+	std::cout << "  Tarea 1: Camara FPS           [ON]" << std::endl;
+	std::cout << "  Tarea 2: Aspect ratio manual   [ON]" << std::endl;
+#ifdef ENABLE_TAREA3
+	std::cout << "  Tarea 3: Luz como uniform      [ON]" << std::endl;
+#else
+	std::cout << "  Tarea 3: Luz como uniform      [OFF]" << std::endl;
+#endif
+#ifdef ENABLE_TAREA4
+	std::cout << "  Tarea 4: Segundo objeto        [ON]" << std::endl;
+#else
+	std::cout << "  Tarea 4: Segundo objeto        [OFF]" << std::endl;
+#endif
+#ifdef ENABLE_TAREA5
+	std::cout << "  Tarea 5: Dos programas shader  [ON]" << std::endl;
+	std::cout << "    sp0 = v2 (color vertice, luz uniform)" << std::endl;
+	std::cout << "    sp1 = v3 (texturas, luz uniform)" << std::endl;
+#else
+	std::cout << "  Tarea 5: Dos programas shader  [OFF]" << std::endl;
+#endif
+	std::cout << "========================================" << std::endl;
+}
 
 
 int main(int argc, char** argv)
 {
 	std::locale::global(std::locale("spanish"));
-
-	std::cout << "========================================" << std::endl;
-	std::cout << "  Practica 3 - Programacion en OpenGL" << std::endl;
-	std::cout << "  Tarea 5: Dos parejas de shaders" << std::endl;
-	std::cout << "  sp0 = v2 (color vertice, luz uniform)" << std::endl;
-	std::cout << "  sp1 = v3 (texturas, luz uniform)" << std::endl;
-	std::cout << "========================================" << std::endl;
+	printConfig();
 
 	initContext(argc, argv);
 	initOGL();
 
-	// Tarea 5: Compilar ambos programas
-	initShaderProgram(sp0,
-		"../shaders_P3/shader.v2.vert",
-		"../shaders_P3/shader.v2.frag");
-	initShaderProgram(sp1,
-		"../shaders_P3/shader.v3.vert",
-		"../shaders_P3/shader.v3.frag");
+	// Selección de shaders según tareas activas
+#ifdef ENABLE_TAREA3
+	initShaderProgram(sp1, "../shaders_P3/shader.v3.vert", "../shaders_P3/shader.v3.frag");
+#else
+	initShaderProgram(sp1, "../shaders_P3/shader.v1.vert", "../shaders_P3/shader.v1.frag");
+#endif
+
+#ifdef ENABLE_TAREA5
+	initShaderProgram(sp0, "../shaders_P3/shader.v2.vert", "../shaders_P3/shader.v2.frag");
+#endif
 
 	initObj();
 
@@ -176,9 +232,10 @@ void updateView()
 }
 
 //////////////////////////////////////////
-// Tarea 5: Funciones auxiliares de render
+// Funciones auxiliares de render
 //////////////////////////////////////////
 
+#ifdef ENABLE_TAREA3
 void uploadLight(const ShaderProgram& sp)
 {
 	glm::vec3 lightPosEye = glm::vec3(view * glm::vec4(lightPosWorld, 1.0f));
@@ -188,6 +245,7 @@ void uploadLight(const ShaderProgram& sp)
 	if (sp.uId != -1) glUniform3f(sp.uId, lightIntensity, lightIntensity, lightIntensity);
 	if (sp.uIs != -1) glUniform3f(sp.uIs, lightIntensity, lightIntensity, lightIntensity);
 }
+#endif
 
 void drawObject(const ShaderProgram& sp, const glm::mat4& objModel)
 {
@@ -256,7 +314,6 @@ void initOGL()
 	updateView();
 }
 
-// Tarea 5: Función genérica de inicialización de programa
 void initShaderProgram(ShaderProgram& sp, const char* vname, const char* fname)
 {
 	sp.vshader = loadShader(vname, GL_VERTEX_SHADER);
@@ -283,16 +340,13 @@ void initShaderProgram(ShaderProgram& sp, const char* vname, const char* fname)
 		exit(-1);
 	}
 
-	// Uniforms de matrices
 	sp.uNormalMat = glGetUniformLocation(sp.program, "normal");
 	sp.uModelViewMat = glGetUniformLocation(sp.program, "modelView");
 	sp.uModelViewProjMat = glGetUniformLocation(sp.program, "modelViewProj");
 
-	// Uniforms de texturas
 	sp.uColorTex = glGetUniformLocation(sp.program, "colorTex");
 	sp.uEmiTex = glGetUniformLocation(sp.program, "emiTex");
 
-	// Uniforms de luz
 	sp.uLightPos = glGetUniformLocation(sp.program, "lpos");
 	sp.uIa = glGetUniformLocation(sp.program, "Ia");
 	sp.uId = glGetUniformLocation(sp.program, "Id");
@@ -310,9 +364,10 @@ void destroyShaderProgram(ShaderProgram& sp)
 
 void destroy()
 {
-	// Tarea 5: Liberar ambos programas
-	destroyShaderProgram(sp0);
 	destroyShaderProgram(sp1);
+#ifdef ENABLE_TAREA5
+	destroyShaderProgram(sp0);
+#endif
 
 	glDeleteBuffers(5, buffs);
 	glDeleteVertexArrays(1, &vao);
@@ -417,13 +472,14 @@ unsigned int loadTex(const char* fileName)
 void renderFunc()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	// VAO compartido
 	glBindVertexArray(vao);
 
-	// ===== Cubo 1: sp1 (v3 — texturas + luz uniform) =====
+	// ===== Cubo 1: sp1 =====
 	glUseProgram(sp1.program);
+
+#ifdef ENABLE_TAREA3
 	uploadLight(sp1);
+#endif
 
 	if (sp1.uColorTex != -1)
 	{
@@ -440,12 +496,20 @@ void renderFunc()
 
 	drawObject(sp1, model);
 
-	// ===== Cubo 2: sp0 (v2 — color por vértice + luz uniform) =====
+	// ===== Cubo 2 =====
+#ifdef ENABLE_TAREA4
+
+#ifdef ENABLE_TAREA5
+	// Tarea 5: segundo programa (sp0, sin texturas)
 	glUseProgram(sp0.program);
 	uploadLight(sp0);
-	// sp0 no usa texturas (uColorTex = -1, uEmiTex = -1): no subimos nada
-
 	drawObject(sp0, model2);
+#else
+	// Tarea 4 sin Tarea 5: mismo programa (sp1)
+	drawObject(sp1, model2);
+#endif
+
+#endif // ENABLE_TAREA4
 
 	glutSwapBuffers();
 }
@@ -482,23 +546,30 @@ void idleFunc()
 	angle += speed * dt;
 	if (angle > 2.0f * 3.141592f) angle -= 2.0f * 3.141592f;
 
+#ifdef ENABLE_TAREA4
 	orbitAngle += 0.5f * dt;
 	if (orbitAngle > 2.0f * 3.141592f) orbitAngle -= 2.0f * 3.141592f;
+#endif
+
 #else
 	angle = (angle > 3.141592f * 2.0f) ? 0.0f : angle + 0.01f;
+#ifdef ENABLE_TAREA4
 	orbitAngle = (orbitAngle > 3.141592f * 2.0f) ? 0.0f : orbitAngle + 0.005f;
+#endif
 #endif
 
 	// Cubo 1: rotación sobre eje diagonal
 	model = glm::mat4(1.0f);
 	model = glm::rotate(model, angle, glm::vec3(1.0f, 1.0f, 0.0f));
 
+#ifdef ENABLE_TAREA4
 	// Cubo 2: órbita + escala + spin
 	model2 = glm::mat4(1.0f);
 	model2 = glm::rotate(model2, orbitAngle, glm::vec3(0.0f, 1.0f, 0.0f));
 	model2 = glm::translate(model2, glm::vec3(3.0f, 0.0f, 0.0f));
 	model2 = glm::scale(model2, glm::vec3(0.5f));
 	model2 = glm::rotate(model2, orbitAngle * 3.0f, glm::vec3(1.0f, 1.0f, 0.0f));
+#endif
 
 	glutPostRedisplay();
 }
@@ -521,6 +592,7 @@ void keyboardFunc(unsigned char key, int x, int y)
 	case 'q': lookAt = rotateY(lookAt, rotationSpeed); break;
 	case 'e': lookAt = rotateY(lookAt, -rotationSpeed); break;
 
+#ifdef ENABLE_TAREA3
 		// Luz — posición (Tarea 3)
 	case 'j': lightPosWorld.x -= 0.5f; break;
 	case 'l': lightPosWorld.x += 0.5f; break;
@@ -532,6 +604,7 @@ void keyboardFunc(unsigned char key, int x, int y)
 		// Luz — intensidad (Tarea 3)
 	case '+': lightIntensity = std::min(lightIntensity + 0.1f, 3.0f); break;
 	case '-': lightIntensity = std::max(lightIntensity - 0.1f, 0.0f); break;
+#endif
 
 	case 27: exit(0); break;
 	}
