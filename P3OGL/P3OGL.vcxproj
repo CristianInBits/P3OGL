@@ -27,6 +27,10 @@
     <None Include="..\shaders_P3\shader.v2.vert" />
     <None Include="..\shaders_P3\shader.v3.frag" />
     <None Include="..\shaders_P3\shader.v3.vert" />
+    <None Include="..\shaders_P3\shader.v4.frag" />
+    <None Include="..\shaders_P3\shader.v4.vert" />
+    <None Include="..\shaders_P3\shader.v5.frag" />
+    <None Include="..\shaders_P3\shader.v5.vert" />
     <None Include="packages.config" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

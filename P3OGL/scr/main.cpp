@@ -19,17 +19,18 @@
 // SELECCIÓN DE TAREAS
 // ============================================================================
 // Tareas 1 y 2 (cámara FPS + proyección manual) siempre activas.
-// Comenta/descomenta las siguientes para activar/desactivar tareas:
 //
-// ENABLE_TAREA3 : luz como uniform (shaders v2/v3 en vez de v0/v1)
-// ENABLE_TAREA4 : segundo cubo orbitante (requiere ENABLE_TAREA3)
-// ENABLE_TAREA5 : dos programas shader (requiere ENABLE_TAREA3 y ENABLE_TAREA4)
+// ENABLE_TAREA3    : luz como uniform (shaders v2/v3)
+// ENABLE_TAREA4    : segundo cubo orbitante
+// ENABLE_TAREA5    : dos programas shader
+// ENABLE_OPTATIVA1 : múltiples fuentes de luz (shaders v4/v5)
 // ============================================================================
 #define ENABLE_TAREA3
 #define ENABLE_TAREA4
 #define ENABLE_TAREA5
+#define ENABLE_OPTATIVA1
 
-// Validación
+// Validación de dependencias
 #if defined(ENABLE_TAREA5) && !defined(ENABLE_TAREA4)
 #error "ENABLE_TAREA5 requiere ENABLE_TAREA4"
 #endif
@@ -38,6 +39,17 @@
 #endif
 #if defined(ENABLE_TAREA4) && !defined(ENABLE_TAREA3)
 #error "ENABLE_TAREA4 requiere ENABLE_TAREA3"
+#endif
+#if defined(ENABLE_OPTATIVA1) && !defined(ENABLE_TAREA3)
+#error "ENABLE_OPTATIVA1 requiere ENABLE_TAREA3"
+#endif
+
+// ============================================================================
+// Constantes
+// ============================================================================
+#ifdef ENABLE_OPTATIVA1
+const int MAX_LIGHTS = 4;
+const int NUM_LIGHTS = 3;
 #endif
 
 //////////////////////////////////////////////////////////////
@@ -56,10 +68,20 @@ struct ShaderProgram
 	int uColorTex = -1;
 	int uEmiTex = -1;
 
+#ifdef ENABLE_OPTATIVA1
+	// Optativa 1: arrays de luces
+	int uNumLights = -1;
+	int uLightPos = -1;  // location de lightPos[0]
+	int uLightId = -1;   // location de lightId[0]
+	int uLightIs = -1;   // location de lightIs[0]
+	int uIa = -1;
+#else
+	// Tarea 3: luz única
 	int uLightPos = -1;
 	int uIa = -1;
 	int uId = -1;
 	int uIs = -1;
+#endif
 };
 
 //////////////////////////////////////////////////////////////
@@ -91,32 +113,50 @@ const float fovY = 60.0f;
 const float inv_t30 = 1.0f / tan(glm::radians(fovY / 2.0f));
 
 #ifdef ENABLE_TAREA3
-// Tarea 3: Luz como uniform
+
+#ifdef ENABLE_OPTATIVA1
+// Optativa 1: Múltiples luces
+glm::vec3 lightPosWorld[MAX_LIGHTS] = {
+	glm::vec3(0.0f,  3.0f,  3.0f),   // Luz 0: blanca, arriba-delante
+	glm::vec3(-4.0f,  1.0f,  0.0f),   // Luz 1: roja, izquierda
+	glm::vec3(4.0f,  1.0f,  0.0f),   // Luz 2: azul, derecha
+};
+glm::vec3 lightId[MAX_LIGHTS] = {
+	glm::vec3(1.0f, 1.0f, 1.0f),      // Blanca
+	glm::vec3(1.0f, 0.2f, 0.2f),      // Roja
+	glm::vec3(0.2f, 0.2f, 1.0f),      // Azul
+};
+glm::vec3 lightIs[MAX_LIGHTS] = {
+	glm::vec3(1.0f, 1.0f, 1.0f),
+	glm::vec3(1.0f, 0.2f, 0.2f),
+	glm::vec3(0.2f, 0.2f, 1.0f),
+};
+int selectedLight = 0;
+#else
+// Tarea 3: Luz única
 glm::vec3 lightPosWorld = glm::vec3(0.0f, 3.0f, 3.0f);
 float lightIntensity = 1.0f;
 #endif
+
+#endif // ENABLE_TAREA3
 
 //////////////////////////////////////////////////////////////
 // Variables que nos dan acceso a Objetos OpenGL
 //////////////////////////////////////////////////////////////
 
-// Programa(s) shader
-ShaderProgram sp1;  // Programa principal (siempre existe)
+ShaderProgram sp1;
 #ifdef ENABLE_TAREA5
-ShaderProgram sp0;  // Segundo programa (solo Tarea 5)
+ShaderProgram sp0;
 #endif
 
-// Atributos (fijados por layout, compartidos)
 int inPos = 0;
 int inColor = 1;
 int inNormal = 2;
 int inTexCoord = 3;
 
-// VAO y VBOs
 unsigned int vao;
 unsigned int buffs[5];
 
-// Texturas
 unsigned int colorTexId;
 unsigned int emiTexId;
 
@@ -155,24 +195,30 @@ void printConfig()
 	std::cout << "========================================" << std::endl;
 	std::cout << "  Practica 3 - Programacion en OpenGL" << std::endl;
 	std::cout << "========================================" << std::endl;
-	std::cout << "  Tarea 1: Camara FPS           [ON]" << std::endl;
-	std::cout << "  Tarea 2: Aspect ratio manual   [ON]" << std::endl;
+	std::cout << "  Tarea 1: Camara FPS            [ON]" << std::endl;
+	std::cout << "  Tarea 2: Aspect ratio manual    [ON]" << std::endl;
 #ifdef ENABLE_TAREA3
-	std::cout << "  Tarea 3: Luz como uniform      [ON]" << std::endl;
+	std::cout << "  Tarea 3: Luz como uniform       [ON]" << std::endl;
 #else
-	std::cout << "  Tarea 3: Luz como uniform      [OFF]" << std::endl;
+	std::cout << "  Tarea 3: Luz como uniform       [OFF]" << std::endl;
 #endif
 #ifdef ENABLE_TAREA4
-	std::cout << "  Tarea 4: Segundo objeto        [ON]" << std::endl;
+	std::cout << "  Tarea 4: Segundo objeto         [ON]" << std::endl;
 #else
-	std::cout << "  Tarea 4: Segundo objeto        [OFF]" << std::endl;
+	std::cout << "  Tarea 4: Segundo objeto         [OFF]" << std::endl;
 #endif
 #ifdef ENABLE_TAREA5
-	std::cout << "  Tarea 5: Dos programas shader  [ON]" << std::endl;
-	std::cout << "    sp0 = v2 (color vertice, luz uniform)" << std::endl;
-	std::cout << "    sp1 = v3 (texturas, luz uniform)" << std::endl;
+	std::cout << "  Tarea 5: Dos programas shader   [ON]" << std::endl;
 #else
-	std::cout << "  Tarea 5: Dos programas shader  [OFF]" << std::endl;
+	std::cout << "  Tarea 5: Dos programas shader   [OFF]" << std::endl;
+#endif
+#ifdef ENABLE_OPTATIVA1
+	std::cout << "  Opt. 1:  Multiples luces (" << NUM_LIGHTS << ")   [ON]" << std::endl;
+	std::cout << "    Luz 0: blanca (0, 3, 3)" << std::endl;
+	std::cout << "    Luz 1: roja  (-4, 1, 0)" << std::endl;
+	std::cout << "    Luz 2: azul  (4, 1, 0)" << std::endl;
+#else
+	std::cout << "  Opt. 1:  Multiples luces        [OFF]" << std::endl;
 #endif
 	std::cout << "========================================" << std::endl;
 }
@@ -187,14 +233,20 @@ int main(int argc, char** argv)
 	initOGL();
 
 	// Selección de shaders según tareas activas
-#ifdef ENABLE_TAREA3
+#ifdef ENABLE_OPTATIVA1
+	initShaderProgram(sp1, "../shaders_P3/shader.v5.vert", "../shaders_P3/shader.v5.frag");
+#elif defined(ENABLE_TAREA3)
 	initShaderProgram(sp1, "../shaders_P3/shader.v3.vert", "../shaders_P3/shader.v3.frag");
 #else
 	initShaderProgram(sp1, "../shaders_P3/shader.v1.vert", "../shaders_P3/shader.v1.frag");
 #endif
 
 #ifdef ENABLE_TAREA5
+#ifdef ENABLE_OPTATIVA1
+	initShaderProgram(sp0, "../shaders_P3/shader.v4.vert", "../shaders_P3/shader.v4.frag");
+#else
 	initShaderProgram(sp0, "../shaders_P3/shader.v2.vert", "../shaders_P3/shader.v2.frag");
+#endif
 #endif
 
 	initObj();
@@ -238,12 +290,24 @@ void updateView()
 #ifdef ENABLE_TAREA3
 void uploadLight(const ShaderProgram& sp)
 {
-	glm::vec3 lightPosEye = glm::vec3(view * glm::vec4(lightPosWorld, 1.0f));
+#ifdef ENABLE_OPTATIVA1
+	// Transformar todas las posiciones a eye space
+	glm::vec3 lightPosEye[MAX_LIGHTS];
+	for (int i = 0; i < NUM_LIGHTS; i++)
+		lightPosEye[i] = glm::vec3(view * glm::vec4(lightPosWorld[i], 1.0f));
 
+	if (sp.uNumLights != -1) glUniform1i(sp.uNumLights, NUM_LIGHTS);
+	if (sp.uLightPos != -1)  glUniform3fv(sp.uLightPos, NUM_LIGHTS, &lightPosEye[0][0]);
+	if (sp.uLightId != -1)   glUniform3fv(sp.uLightId, NUM_LIGHTS, &lightId[0][0]);
+	if (sp.uLightIs != -1)   glUniform3fv(sp.uLightIs, NUM_LIGHTS, &lightIs[0][0]);
+	if (sp.uIa != -1)        glUniform3f(sp.uIa, 0.3f, 0.3f, 0.3f);
+#else
+	glm::vec3 lightPosEye = glm::vec3(view * glm::vec4(lightPosWorld, 1.0f));
 	if (sp.uLightPos != -1) glUniform3fv(sp.uLightPos, 1, &lightPosEye[0]);
 	if (sp.uIa != -1) glUniform3f(sp.uIa, 0.3f, 0.3f, 0.3f);
 	if (sp.uId != -1) glUniform3f(sp.uId, lightIntensity, lightIntensity, lightIntensity);
 	if (sp.uIs != -1) glUniform3f(sp.uIs, lightIntensity, lightIntensity, lightIntensity);
+#endif
 }
 #endif
 
@@ -340,17 +404,28 @@ void initShaderProgram(ShaderProgram& sp, const char* vname, const char* fname)
 		exit(-1);
 	}
 
+	// Uniforms de matrices
 	sp.uNormalMat = glGetUniformLocation(sp.program, "normal");
 	sp.uModelViewMat = glGetUniformLocation(sp.program, "modelView");
 	sp.uModelViewProjMat = glGetUniformLocation(sp.program, "modelViewProj");
 
+	// Uniforms de texturas
 	sp.uColorTex = glGetUniformLocation(sp.program, "colorTex");
 	sp.uEmiTex = glGetUniformLocation(sp.program, "emiTex");
 
+	// Uniforms de luz
+#ifdef ENABLE_OPTATIVA1
+	sp.uNumLights = glGetUniformLocation(sp.program, "numLights");
+	sp.uLightPos = glGetUniformLocation(sp.program, "lightPos");
+	sp.uLightId = glGetUniformLocation(sp.program, "lightId");
+	sp.uLightIs = glGetUniformLocation(sp.program, "lightIs");
+	sp.uIa = glGetUniformLocation(sp.program, "Ia");
+#else
 	sp.uLightPos = glGetUniformLocation(sp.program, "lpos");
 	sp.uIa = glGetUniformLocation(sp.program, "Ia");
 	sp.uId = glGetUniformLocation(sp.program, "Id");
 	sp.uIs = glGetUniformLocation(sp.program, "Is");
+#endif
 }
 
 void destroyShaderProgram(ShaderProgram& sp)
@@ -500,16 +575,14 @@ void renderFunc()
 #ifdef ENABLE_TAREA4
 
 #ifdef ENABLE_TAREA5
-	// Tarea 5: segundo programa (sp0, sin texturas)
 	glUseProgram(sp0.program);
 	uploadLight(sp0);
 	drawObject(sp0, model2);
 #else
-	// Tarea 4 sin Tarea 5: mismo programa (sp1)
 	drawObject(sp1, model2);
 #endif
 
-#endif // ENABLE_TAREA4
+#endif
 
 	glutSwapBuffers();
 }
@@ -558,12 +631,10 @@ void idleFunc()
 #endif
 #endif
 
-	// Cubo 1: rotación sobre eje diagonal
 	model = glm::mat4(1.0f);
 	model = glm::rotate(model, angle, glm::vec3(1.0f, 1.0f, 0.0f));
 
 #ifdef ENABLE_TAREA4
-	// Cubo 2: órbita + escala + spin
 	model2 = glm::mat4(1.0f);
 	model2 = glm::rotate(model2, orbitAngle, glm::vec3(0.0f, 1.0f, 0.0f));
 	model2 = glm::translate(model2, glm::vec3(3.0f, 0.0f, 0.0f));
@@ -593,7 +664,21 @@ void keyboardFunc(unsigned char key, int x, int y)
 	case 'e': lookAt = rotateY(lookAt, -rotationSpeed); break;
 
 #ifdef ENABLE_TAREA3
-		// Luz — posición (Tarea 3)
+
+#ifdef ENABLE_OPTATIVA1
+		// Optativa 1: Seleccionar luz activa con 1/2/3 y moverla
+	case '1': selectedLight = 0; std::cout << "Luz seleccionada: 0 (blanca)" << std::endl; break;
+	case '2': selectedLight = 1; std::cout << "Luz seleccionada: 1 (roja)" << std::endl; break;
+	case '3': selectedLight = 2; std::cout << "Luz seleccionada: 2 (azul)" << std::endl; break;
+
+	case 'j': lightPosWorld[selectedLight].x -= 0.5f; break;
+	case 'l': lightPosWorld[selectedLight].x += 0.5f; break;
+	case 'o': lightPosWorld[selectedLight].y += 0.5f; break;
+	case 'p': lightPosWorld[selectedLight].y -= 0.5f; break;
+	case 'k': lightPosWorld[selectedLight].z -= 0.5f; break;
+	case ';': lightPosWorld[selectedLight].z += 0.5f; break;
+#else
+		// Tarea 3: Mover luz única
 	case 'j': lightPosWorld.x -= 0.5f; break;
 	case 'l': lightPosWorld.x += 0.5f; break;
 	case 'o': lightPosWorld.y += 0.5f; break;
@@ -601,10 +686,11 @@ void keyboardFunc(unsigned char key, int x, int y)
 	case 'k': lightPosWorld.z -= 0.5f; break;
 	case ';': lightPosWorld.z += 0.5f; break;
 
-		// Luz — intensidad (Tarea 3)
 	case '+': lightIntensity = std::min(lightIntensity + 0.1f, 3.0f); break;
 	case '-': lightIntensity = std::max(lightIntensity - 0.1f, 0.0f); break;
 #endif
+
+#endif // ENABLE_TAREA3
 
 	case 27: exit(0); break;
 	}

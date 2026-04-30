@@ -50,5 +50,17 @@
     <None Include="..\shaders_P3\shader.v2.vert">
       <Filter>shaders</Filter>
     </None>
+    <None Include="..\shaders_P3\shader.v4.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\shaders_P3\shader.v4.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\shaders_P3\shader.v5.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="..\shaders_P3\shader.v5.vert">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
