@@ -24,11 +24,13 @@
 // ENABLE_TAREA4    : segundo cubo orbitante
 // ENABLE_TAREA5    : dos programas shader
 // ENABLE_OPTATIVA1 : múltiples fuentes de luz (shaders v4/v5)
+// ENABLE_OPTATIVA2 : geometría asociada a cada luz (shader.light)
 // ============================================================================
 #define ENABLE_TAREA3
 #define ENABLE_TAREA4
 #define ENABLE_TAREA5
 #define ENABLE_OPTATIVA1
+#define ENABLE_OPTATIVA2
 
 // Validación de dependencias
 #if defined(ENABLE_TAREA5) && !defined(ENABLE_TAREA4)
@@ -42,6 +44,9 @@
 #endif
 #if defined(ENABLE_OPTATIVA1) && !defined(ENABLE_TAREA3)
 #error "ENABLE_OPTATIVA1 requiere ENABLE_TAREA3"
+#endif
+#if defined(ENABLE_OPTATIVA2) && !defined(ENABLE_OPTATIVA1)
+#error "ENABLE_OPTATIVA2 requiere ENABLE_OPTATIVA1"
 #endif
 
 // ============================================================================
@@ -82,6 +87,9 @@ struct ShaderProgram
 	int uId = -1;
 	int uIs = -1;
 #endif
+
+	// Optativa 2: color de la luz para geometría emisiva
+	int uLightColor = -1;
 };
 
 //////////////////////////////////////////////////////////////
@@ -99,7 +107,7 @@ float orbitAngle = 0.0f;
 #endif
 
 // Tarea 1: Cámara FPS
-glm::vec3 CoP = glm::vec3(0.0f, 0.0f, 6.0f);
+glm::vec3 CoP = glm::vec3(0.0f, 0.0f, 10.0f);
 glm::vec3 lookAt = glm::vec3(0.0f, 0.0f, -1.0f);
 const glm::vec3 UP = glm::vec3(0.0f, 1.0f, 0.0f);
 
@@ -148,6 +156,9 @@ ShaderProgram sp1;
 #ifdef ENABLE_TAREA5
 ShaderProgram sp0;
 #endif
+#ifdef ENABLE_OPTATIVA2
+ShaderProgram spLight;  // Shader solo emisivo para geometría de luces
+#endif
 
 int inPos = 0;
 int inColor = 1;
@@ -187,6 +198,10 @@ void drawObject(const ShaderProgram& sp, const glm::mat4& objModel);
 void uploadLight(const ShaderProgram& sp);
 #endif
 
+#ifdef ENABLE_OPTATIVA2
+void drawLightGeometry();
+#endif
+
 // ============================================================================
 // FUNCIONES AUXILIARES
 // ============================================================================
@@ -220,6 +235,11 @@ void printConfig()
 #else
 	std::cout << "  Opt. 1:  Multiples luces        [OFF]" << std::endl;
 #endif
+#ifdef ENABLE_OPTATIVA2
+	std::cout << "  Opt. 2:  Geometria de luces     [ON]" << std::endl;
+#else
+	std::cout << "  Opt. 2:  Geometria de luces     [OFF]" << std::endl;
+#endif
 	std::cout << "========================================" << std::endl;
 }
 
@@ -247,6 +267,12 @@ int main(int argc, char** argv)
 #else
 	initShaderProgram(sp0, "../shaders_P3/shader.v2.vert", "../shaders_P3/shader.v2.frag");
 #endif
+#endif
+
+#ifdef ENABLE_OPTATIVA2
+	initShaderProgram(spLight,
+		"../shaders_P3/shader.light.vert",
+		"../shaders_P3/shader.light.frag");
 #endif
 
 	initObj();
@@ -327,6 +353,40 @@ void drawObject(const ShaderProgram& sp, const glm::mat4& objModel)
 	glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3,
 		GL_UNSIGNED_INT, (void*)0);
 }
+
+#ifdef ENABLE_OPTATIVA2
+// Optativa 2: Dibuja un cubo pequeño en la posición de cada luz,
+// usando solo el color emisivo (sin iluminación). Reutiliza el VAO
+// del cubo principal con una model de translate + scale.
+void drawLightGeometry()
+{
+	glUseProgram(spLight.program);
+
+	const float lightScale = 0.15f;
+
+	for (int i = 0; i < NUM_LIGHTS; i++)
+	{
+		// Construir model: posicionar en la luz y escalar
+		glm::mat4 lightModel = glm::mat4(1.0f);
+		lightModel = glm::translate(lightModel, lightPosWorld[i]);
+		lightModel = glm::scale(lightModel, glm::vec3(lightScale));
+
+		// Solo necesitamos modelViewProj (no hay iluminación)
+		glm::mat4 modelViewProj = proj * view * lightModel;
+
+		if (spLight.uModelViewProjMat != -1)
+			glUniformMatrix4fv(spLight.uModelViewProjMat, 1, GL_FALSE,
+				&(modelViewProj[0][0]));
+
+		// Color emisivo = color difuso de la luz
+		if (spLight.uLightColor != -1)
+			glUniform3fv(spLight.uLightColor, 1, &lightId[i][0]);
+
+		glDrawElements(GL_TRIANGLES, cubeNTriangleIndex * 3,
+			GL_UNSIGNED_INT, (void*)0);
+	}
+}
+#endif
 
 //////////////////////////////////////////
 // Funciones de inicialización
@@ -426,6 +486,9 @@ void initShaderProgram(ShaderProgram& sp, const char* vname, const char* fname)
 	sp.uId = glGetUniformLocation(sp.program, "Id");
 	sp.uIs = glGetUniformLocation(sp.program, "Is");
 #endif
+
+	// Optativa 2: location del color emisivo (solo relevante para spLight)
+	sp.uLightColor = glGetUniformLocation(sp.program, "lightColor");
 }
 
 void destroyShaderProgram(ShaderProgram& sp)
@@ -442,6 +505,9 @@ void destroy()
 	destroyShaderProgram(sp1);
 #ifdef ENABLE_TAREA5
 	destroyShaderProgram(sp0);
+#endif
+#ifdef ENABLE_OPTATIVA2
+	destroyShaderProgram(spLight);
 #endif
 
 	glDeleteBuffers(5, buffs);
@@ -582,6 +648,11 @@ void renderFunc()
 	drawObject(sp1, model2);
 #endif
 
+#endif
+
+#ifdef ENABLE_OPTATIVA2
+	// Optativa 2: dibujar geometría de cada luz (cubos emisivos)
+	drawLightGeometry();
 #endif
 
 	glutSwapBuffers();

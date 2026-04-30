@@ -19,6 +19,8 @@
     <ClCompile Include="scr\main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\shaders_P3\shader.light.frag" />
+    <None Include="..\shaders_P3\shader.light.vert" />
     <None Include="..\shaders_P3\shader.v0.frag" />
     <None Include="..\shaders_P3\shader.v0.vert" />
     <None Include="..\shaders_P3\shader.v1.frag" />
