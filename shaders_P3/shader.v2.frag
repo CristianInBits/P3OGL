@@ -15,7 +15,7 @@ vec3 Ka;
 vec3 Kd;
 vec3 Ks;
 vec3 N;
-float alpha = 1700.0;
+float alpha = 50.0;
 vec3 Ke;
 
 // Tarea 3: Propiedades de la luz como uniforms
