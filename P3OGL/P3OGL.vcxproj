@@ -13,6 +13,11 @@
   <ItemGroup>
     <ClInclude Include="scr\auxiliar.h" />
     <ClInclude Include="scr\BOX.h" />
+    <ClInclude Include="scr\Light.h" />
+    <ClInclude Include="scr\Material.h" />
+    <ClInclude Include="scr\Mesh.h" />
+    <ClInclude Include="scr\SceneObject.h" />
+    <ClInclude Include="scr\ShaderProgram.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="scr\auxiliar.cpp" />

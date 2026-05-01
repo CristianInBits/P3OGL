@@ -15,6 +15,21 @@
     <ClInclude Include="scr\auxiliar.h">
       <Filter>src</Filter>
     </ClInclude>
+    <ClInclude Include="scr\Material.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="scr\Mesh.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="scr\SceneObject.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="scr\ShaderProgram.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="scr\Light.h">
+      <Filter>src</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="scr\main.cpp">
