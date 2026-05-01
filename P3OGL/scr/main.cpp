@@ -25,12 +25,14 @@
 // ENABLE_TAREA5    : dos programas shader
 // ENABLE_OPTATIVA1 : múltiples fuentes de luz (shaders v4/v5)
 // ENABLE_OPTATIVA2 : geometría asociada a cada luz (shader.light)
+// ENABLE_OPTATIVA3 : trayectorias cíclicas de las luces
 // ============================================================================
 #define ENABLE_TAREA3
 #define ENABLE_TAREA4
 #define ENABLE_TAREA5
 #define ENABLE_OPTATIVA1
 #define ENABLE_OPTATIVA2
+#define ENABLE_OPTATIVA3
 
 // Validación de dependencias
 #if defined(ENABLE_TAREA5) && !defined(ENABLE_TAREA4)
@@ -47,6 +49,9 @@
 #endif
 #if defined(ENABLE_OPTATIVA2) && !defined(ENABLE_OPTATIVA1)
 #error "ENABLE_OPTATIVA2 requiere ENABLE_OPTATIVA1"
+#endif
+#if defined(ENABLE_OPTATIVA3) && !defined(ENABLE_OPTATIVA1)
+#error "ENABLE_OPTATIVA3 requiere ENABLE_OPTATIVA1"
 #endif
 
 // ============================================================================
@@ -107,7 +112,7 @@ float orbitAngle = 0.0f;
 #endif
 
 // Tarea 1: Cámara FPS
-glm::vec3 CoP = glm::vec3(0.0f, 0.0f, 10.0f);
+glm::vec3 CoP = glm::vec3(0.0f, 0.0f, 12.0f);
 glm::vec3 lookAt = glm::vec3(0.0f, 0.0f, -1.0f);
 const glm::vec3 UP = glm::vec3(0.0f, 1.0f, 0.0f);
 
@@ -140,6 +145,9 @@ glm::vec3 lightIs[MAX_LIGHTS] = {
 	glm::vec3(0.2f, 0.2f, 1.0f),
 };
 int selectedLight = 0;
+#ifdef ENABLE_OPTATIVA3
+float lightAngle[MAX_LIGHTS] = { 0.0f, 0.0f, 0.0f, 0.0f };
+#endif
 #else
 // Tarea 3: Luz única
 glm::vec3 lightPosWorld = glm::vec3(0.0f, 3.0f, 3.0f);
@@ -239,6 +247,11 @@ void printConfig()
 	std::cout << "  Opt. 2:  Geometria de luces     [ON]" << std::endl;
 #else
 	std::cout << "  Opt. 2:  Geometria de luces     [OFF]" << std::endl;
+#endif
+#ifdef ENABLE_OPTATIVA3
+	std::cout << "  Opt. 3:  Trayectorias ciclicas  [ON]" << std::endl;
+#else
+	std::cout << "  Opt. 3:  Trayectorias ciclicas  [OFF]" << std::endl;
 #endif
 	std::cout << "========================================" << std::endl;
 }
@@ -711,6 +724,42 @@ void idleFunc()
 	model2 = glm::translate(model2, glm::vec3(3.0f, 0.0f, 0.0f));
 	model2 = glm::scale(model2, glm::vec3(0.5f));
 	model2 = glm::rotate(model2, orbitAngle * 3.0f, glm::vec3(1.0f, 1.0f, 0.0f));
+#endif
+
+#ifdef ENABLE_OPTATIVA3
+	// Optativa 3: Trayectorias cíclicas de las luces
+	// Cada luz tiene su propio ángulo y velocidad para evitar saltos al resetear.
+
+#ifdef USE_DELTA_TIME
+	lightAngle[0] += 0.8f * dt;   // Blanca: velocidad base
+	lightAngle[1] += 1.04f * dt;  // Roja: un poco más rápida
+	lightAngle[2] += 0.56f * dt;  // Azul: órbita XZ
+	lightAngle[3] += 0.39f * dt;  // Azul: oscilación vertical
+#else
+	lightAngle[0] += 0.008f;
+	lightAngle[1] += 0.0104f;
+	lightAngle[2] += 0.0056f;
+	lightAngle[3] += 0.0039f;
+#endif
+
+	for (int i = 0; i < MAX_LIGHTS; i++)
+		if (lightAngle[i] > 2.0f * 3.141592f)
+			lightAngle[i] -= 2.0f * 3.141592f;
+
+	// Luz 0 (blanca): órbita circular horizontal, radio 5, altura 3
+	lightPosWorld[0].x = 5.0f * cos(lightAngle[0]);
+	lightPosWorld[0].z = 5.0f * sin(lightAngle[0]);
+	lightPosWorld[0].y = 3.0f;
+
+	// Luz 1 (roja): órbita circular vertical (plano XY), radio 4
+	lightPosWorld[1].x = 4.0f * cos(lightAngle[1]);
+	lightPosWorld[1].y = 4.0f * sin(lightAngle[1]);
+	lightPosWorld[1].z = 0.0f;
+
+	// Luz 2 (azul): órbita circular inclinada, radio 4, oscilación vertical independiente
+	lightPosWorld[2].x = 4.0f * cos(lightAngle[2]);
+	lightPosWorld[2].z = 4.0f * sin(lightAngle[2]);
+	lightPosWorld[2].y = 2.0f * sin(lightAngle[3]);
 #endif
 
 	glutPostRedisplay();
